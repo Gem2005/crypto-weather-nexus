@@ -14,6 +14,7 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   clearNotifications,
+  deleteNotification,
 } from "@/redux/features/notificationsSlice"
 
 export default function Navbar() {
@@ -57,16 +58,28 @@ export default function Navbar() {
               <div className="p-2 flex items-center justify-between border-b">
                 <span className="font-medium">Notifications</span>
                 {notifications.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs"
-                    onClick={() => {
-                      dispatch(markAllNotificationsAsRead())
-                    }}
-                  >
-                    Mark all as read
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => {
+                        dispatch(markAllNotificationsAsRead())
+                      }}
+                    >
+                      Mark all as read
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs text-destructive hover:text-destructive"
+                      onClick={() => {
+                        dispatch(clearNotifications())
+                      }}
+                    >
+                      Delete All
+                    </Button>
+                  </div>
                 )}
               </div>
               {notifications.length === 0 ? (
@@ -104,7 +117,7 @@ export default function Navbar() {
                           className="h-7 text-xs text-destructive hover:text-destructive"
                           onClick={(e) => {
                             e.stopPropagation()
-                            dispatch(clearNotifications())
+                            dispatch(deleteNotification(notification.id)) // Delete only this notification
                           }}
                         >
                           Delete

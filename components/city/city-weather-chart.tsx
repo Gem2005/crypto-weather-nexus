@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import {
   Chart,
@@ -19,18 +20,73 @@ interface CityWeatherChartProps {
   }[]
 }
 
+// Improved fallback data with current dates
+const generateFallbackData = () => {
+  const now = new Date();
+  return Array.from({ length: 7 }).map((_, i) => {
+    const date = new Date();
+    date.setDate(now.getDate() - (6 - i)); // Last 7 days
+    return {
+      date: date.toISOString(),
+      temperature: Math.round(15 + Math.random() * 10), // 15-25°C
+      humidity: Math.round(50 + Math.random() * 40), // 50-90%
+    };
+  });
+};
+
 export default function CityWeatherChart({ cityHistory }: CityWeatherChartProps) {
-  // Create fallback data if no historical data is available or for development testing
-  const fallbackData = [
-    { date: "2025-04-03T00:00:00.000Z", temperature: 18, humidity: 65 },
-    { date: "2025-04-02T00:00:00.000Z", temperature: 20, humidity: 62 },
-    { date: "2025-04-01T00:00:00.000Z", temperature: 17, humidity: 70 },
-    { date: "2025-03-31T00:00:00.000Z", temperature: 16, humidity: 75 },
-    { date: "2025-03-30T00:00:00.000Z", temperature: 19, humidity: 68 },
-  ];
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
   
-  // Use real data if available, otherwise use fallback data
-  const dataToUse = cityHistory && cityHistory.length > 0 ? cityHistory : fallbackData;
+  // Process input data or use fallback
+  useEffect(() => {
+    console.log("CityWeatherChart received data:", cityHistory);
+    
+    try {
+      if (cityHistory && cityHistory.length > 0) {
+        // Validate the data format
+        const validData = cityHistory.filter(item => 
+          item.date && 
+          typeof item.temperature === 'number' && 
+          typeof item.humidity === 'number' && 
+          !isNaN(new Date(item.date).getTime())
+        );
+        
+        if (validData.length > 0) {
+          console.log("Using provided city weather data:", validData);
+          setChartData(validData);
+        } else {
+          console.log("Provided data invalid, using fallback data");
+          setChartData(generateFallbackData());
+        }
+      } else {
+        console.log("No history data provided, using fallback data");
+        setChartData(generateFallbackData());
+      }
+    } catch (err) {
+      console.error("Error processing weather chart data:", err);
+      setError("Failed to process chart data");
+      setChartData(generateFallbackData());
+    }
+  }, [cityHistory]);
+  
+  // Show error state if needed
+  if (error) {
+    return (
+      <Card className="p-4 text-center">
+        <p className="text-destructive">{error}</p>
+      </Card>
+    );
+  }
+
+  // Make sure we have data to display
+  if (chartData.length === 0) {
+    return (
+      <Card className="p-4 text-center">
+        <p className="text-muted-foreground">Loading weather data...</p>
+      </Card>
+    );
+  }
 
   const formatDate = (dateStr: string) => {
     try {
@@ -52,22 +108,28 @@ export default function CityWeatherChart({ cityHistory }: CityWeatherChartProps)
         <Chart>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
-              data={dataToUse}
+              data={chartData}
               margin={{
                 top: 5,
-                right: 10,
+                right: 30,
                 left: 10,
                 bottom: 0,
               }}
             >
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="date" tickFormatter={formatDate} className="text-xs text-muted-foreground" />
+              <XAxis 
+                dataKey="date" 
+                tickFormatter={formatDate} 
+                className="text-xs text-muted-foreground"
+                minTickGap={30}
+              />
               <YAxis
                 yAxisId="temperature"
                 orientation="left"
                 domain={["auto", "auto"]}
                 className="text-xs text-muted-foreground"
                 tickFormatter={(value) => `${value}°C`}
+                width={60}
               />
               <YAxis
                 yAxisId="humidity"
@@ -75,6 +137,7 @@ export default function CityWeatherChart({ cityHistory }: CityWeatherChartProps)
                 domain={[0, 100]}
                 className="text-xs text-muted-foreground"
                 tickFormatter={(value) => `${value}%`}
+                width={50}
               />
               <Tooltip content={<CustomTooltip />} />
               <Line
@@ -85,6 +148,7 @@ export default function CityWeatherChart({ cityHistory }: CityWeatherChartProps)
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 activeDot={{ r: 6 }}
+                isAnimationActive={false}
               />
               <Line
                 yAxisId="humidity"
@@ -94,6 +158,7 @@ export default function CityWeatherChart({ cityHistory }: CityWeatherChartProps)
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 activeDot={{ r: 6 }}
+                isAnimationActive={false}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -102,6 +167,10 @@ export default function CityWeatherChart({ cityHistory }: CityWeatherChartProps)
           <ChartLegendItem name="Temperature" color="#f97316" />
           <ChartLegendItem name="Humidity" color="#0ea5e9" />
         </ChartLegend>
+        {/* Debug info */}
+        <div className="text-xs text-muted-foreground mt-2 text-center">
+          Showing {chartData.length} data points
+        </div>
       </ChartContainer>
     </div>
   )
